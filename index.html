@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GTR Shift System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #DD4814; /* Vermillion */
+            --primary-dark: #b83a0f;
+            --white: #ffffff;
+            --bg: #1a1a1a; /* Dark theme ala GTR image */
+            --card-bg: #2d2d2d;
+            --text: #eee;
+            --text-muted: #aaa;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* --- HEADER --- */
+        header {
+            width: 100%;
+            background: linear-gradient(90deg, #111 0%, var(--primary-dark) 100%);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mode-switch {
+            background: rgba(255,255,255,0.1);
+            padding: 5px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        /* --- CONTAINER --- */
+        .main-container {
+            width: 95%;
+            max-width: 800px;
+            margin-top: 2rem;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border-top: 4px solid var(--primary);
+        }
+
+        h2 { color: var(--primary); margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; }
+
+        /* --- FORMS & INPUTS --- */
+        .input-group { margin-bottom: 1rem; }
+        
+        label { display: block; margin-bottom: 5px; color: var(--text-muted); font-size: 0.9rem; }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            background: #444;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        
+        input:focus { border-color: var(--primary); outline: none; }
+
+        /* --- BUTTONS --- */
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-danger { background: #c0392b; color: white; }
+        .btn-success { background: #27ae60; color: white; }
+
+        /* --- ADMIN ROSTER TABLE --- */
+        .roster-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .roster-table th {
+            text-align: left;
+            background: var(--primary-dark);
+            padding: 10px;
+            color: white;
+        }
+
+        .roster-table td {
+            padding: 10px;
+            border-bottom: 1px solid #444;
+        }
+
+        .roster-table tr:hover { background: #383838; }
+
+        /* --- UTILS --- */
+        .hidden { display: none; }
+        .text-center { text-align: center; }
+        .badge {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .time-big { font-size: 3rem; font-weight: bold; margin: 10px 0; color: var(--white); }
+        
+        /* Grid for Admin Form */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <i class="fas fa-clock"></i> GTR SYSTEM
+        </div>
+        <div class="mode-switch" onclick="switchMode()">
+            <i class="fas fa-exchange-alt"></i> Tukar Mode (Admin/Staff)
+        </div>
+    </header>
+
+    <div id="staffSection" class="main-container">
+        <h2><i class="fas fa-user-clock"></i> Staff Clock In</h2>
+        
+        <div id="staffLoginPanel">
+            <p>Masukkan nama anda untuk melihat jadual kerja hari ini.</p>
+            <div class="input-group">
+                <label>Nama Staff (Case Sensitive)</label>
+                <input type="text" id="loginName" placeholder="Contoh: Ali Bin Abu">
+            </div>
+            <button class="btn btn-primary" onclick="staffLogin()">Cari Jadual Saya</button>
+        </div>
+
+        <div id="staffDashboard" class="hidden text-center">
+            <h3 id="welcomeMsg" style="color: var(--primary);">Welcome, Staff</h3>
+            
+            <div class="time-big" id="liveClock">00:00:00</div>
+            <p id="liveDate" style="color: var(--text-muted);">-</p>
+
+            <div style="background: #444; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: left;">
+                <label style="color: var(--primary); font-weight: bold;">JADUAL ANDA HARI INI:</label>
+                <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                    <span><i class="fas fa-sign-in-alt"></i> Mula: <b id="userShiftStart" style="color: white;">-</b></span>
+                    <span><i class="fas fa-sign-out-alt"></i> Tamat: <b id="userShiftEnd" style="color: white;">-</b></span>
+                </div>
+            </div>
+
+            <div id="statusArea" style="margin-bottom: 20px;">
+                <span id="statusBadge" class="badge" style="background: #555;">Belum Clock In</span>
+            </div>
+
+            <button id="btnIn" class="btn btn-success" onclick="doClockIn()">CLOCK IN</button>
+            <button id="btnOut" class="btn btn-danger" style="margin-top: 10px;" onclick="doClockOut()" disabled>CLOCK OUT</button>
+            
+            <button onclick="location.reload()" style="background:none; border:none; color: #888; margin-top: 20px; cursor: pointer; text-decoration: underline;">Keluar / Back</button>
+        </div>
+    </div>
+
+    <div id="adminSection" class="main-container hidden">
+        <h2><i class="fas fa-tools"></i> Admin Roster Management</h2>
+        <p style="font-size: 0.9rem; color: #aaa;">Daftar staff dan tetapkan masa shift mereka di sini. Staff hanya boleh clock in jika nama mereka wujud dalam senarai ini.</p>
+
+        <div style="background: #333; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <div class="input-group">
+                <label>Nama Staff</label>
+                <input type="text" id="adminName" placeholder="Nama Penuh Staff">
+            </div>
+            <div class="grid-2">
+                <div class="input-group">
+                    <label>Shift Start (Masuk)</label>
+                    <input type="time" id="adminStart">
+                </div>
+                <div class="input-group">
+                    <label>Shift End (Auto Out)</label>
+                    <input type="time" id="adminEnd">
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="saveRoster()">Simpan / Update Jadual</button>
+        </div>
+
+        <h3 style="border-bottom: none;">Senarai Jadual Staff</h3>
+        <div style="overflow-x: auto;">
+            <table class="roster-table">
+                <thead>
+                    <tr>
+                        <th>Nama Staff</th>
+                        <th>Shift</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="rosterTableBody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        // --- CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDUBoGLEI2rbOCQ2tLkCUZ-OIm35QRxiGs",
+            authDomain: "gtr-pitstop.firebaseapp.com",
+            projectId: "gtr-pitstop",
+            storageBucket: "gtr-pitstop.firebasestorage.app",
+            messagingSenderId: "661099399124",
+            appId: "1:661099399124:web:b6590f033eaa3a0c3e3841",
+            measurementId: "G-R210LCD60D"
+        };
+
+        let db;
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            // Load roster jika di page admin
+            loadRosterTable();
+        } catch (e) {
+            console.error("Firebase Config Error", e);
+        }
+
+        // --- GLOBAL STATE ---
+        let currentUserSchedule = null; // Menyimpan data jadual user yang sedang login
+
+        // --- UI UTILS ---
+        window.switchMode = function() {
+            const staffSec = document.getElementById('staffSection');
+            const adminSec = document.getElementById('adminSection');
+            
+            if (staffSec.classList.contains('hidden')) {
+                staffSec.classList.remove('hidden');
+                adminSec.classList.add('hidden');
+            } else {
+                // Masuk Admin Mode
+                const pass = prompt("Masukkan Admin Password (Simulasi: 1234)");
+                if (pass === "1234") {
+                    staffSec.classList.add('hidden');
+                    adminSec.classList.remove('hidden');
+                    loadRosterTable(); // Refresh table
+                }
+            }
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-GB', { hour12: false });
+            document.getElementById('liveClock').innerText = timeStr;
+            document.getElementById('liveDate').innerText = now.toDateString();
+
+            // Auto Clock Out Logic (Client Side Check)
+            if (currentUserSchedule && !document.getElementById('btnOut').disabled) {
+                // Jika user dah clock in
+                const currentHHMM = timeStr.substring(0,5);
+                if (currentHHMM >= currentUserSchedule.shiftEnd) {
+                    console.log("Auto Clockout Triggered for " + currentUserSchedule.name);
+                    doClockOut(true);
+                }
+            }
+        }
+        setInterval(updateClock, 1000);
+
+        // --- STAFF FUNCTIONS ---
+
+        window.staffLogin = async function() {
+            const name = document.getElementById('loginName').value.trim();
+            if (!name) return alert("Sila masukkan nama");
+
+            const btn = document.querySelector('#staffLoginPanel button');
+            btn.innerText = "Checking...";
+            btn.disabled = true;
+
+            try {
+                // Cari jadual staff dalam collection 'schedules'
+                // Kita gunakan nama staff sebagai ID document untuk mudah cari
+                const docRef = doc(db, "schedules", name);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    // Staff wujud
+                    currentUserSchedule = docSnap.data();
+                    
+                    // Update UI
+                    document.getElementById('staffLoginPanel').classList.add('hidden');
+                    document.getElementById('staffDashboard').classList.remove('hidden');
+                    
+                    document.getElementById('welcomeMsg').innerText = `Welcome, ${currentUserSchedule.name}`;
+                    document.getElementById('userShiftStart').innerText = currentUserSchedule.shiftStart;
+                    document.getElementById('userShiftEnd').innerText = currentUserSchedule.shiftEnd;
+
+                } else {
+                    alert("Nama tidak dijumpai dalam jadual! Sila minta Admin daftarkan nama anda.");
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Ralat sambungan.");
+            }
+            
+            btn.innerText = "Cari Jadual Saya";
+            btn.disabled = false;
+        }
+
+        window.doClockIn = async function() {
+            if(!currentUserSchedule) return;
+
+            const btnIn = document.getElementById('btnIn');
+            btnIn.disabled = true;
+            btnIn.innerText = "Processing...";
+
+            try {
+                await addDoc(collection(db, "attendance"), {
+                    name: currentUserSchedule.name,
+                    type: "CLOCK_IN",
+                    shiftStart: currentUserSchedule.shiftStart, // Rekod shift target masa tu
+                    shiftEnd: currentUserSchedule.shiftEnd,
+                    timestamp: serverTimestamp(),
+                    localTime: new Date().toString()
+                });
+
+                alert("Berjaya Clock In!");
+                btnIn.style.display = "none";
+                document.getElementById('btnOut').disabled = false;
+                document.getElementById('statusBadge').innerText = "CLOCKED IN";
+                document.getElementById('statusBadge').style.background = "#27ae60";
+
+            } catch (e) {
+                alert("Error Clock In");
+                btnIn.disabled = false;
+            }
+        }
+
+        window.doClockOut = async function(isAuto = false) {
+            if(!currentUserSchedule) return;
+
+            const btnOut = document.getElementById('btnOut');
+            btnOut.innerText = isAuto ? "Auto Out..." : "Processing...";
+            btnOut.disabled = true;
+
+            try {
+                await addDoc(collection(db, "attendance"), {
+                    name: currentUserSchedule.name,
+                    type: "CLOCK_OUT",
+                    method: isAuto ? "AUTO" : "MANUAL",
+                    timestamp: serverTimestamp(),
+                    localTime: new Date().toString()
+                });
+
+                if(!isAuto) alert("Berjaya Clock Out!");
+                
+                document.getElementById('statusBadge').innerText = isAuto ? "AUTO CLOCKED OUT" : "CLOCKED OUT";
+                document.getElementById('statusBadge').style.background = "#c0392b";
+
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // --- ADMIN FUNCTIONS ---
+
+        window.saveRoster = async function() {
+            const name = document.getElementById('adminName').value.trim();
+            const start = document.getElementById('adminStart').value;
+            const end = document.getElementById('adminEnd').value;
+
+            if (!name || !start || !end) return alert("Sila isi semua maklumat.");
+
+            try {
+                // Simpan dalam collection 'schedules'
+                // Guna setDoc dengan merge:true supaya kalau nama sama, dia update data je
+                await setDoc(doc(db, "schedules", name), {
+                    name: name,
+                    shiftStart: start,
+                    shiftEnd: end
+                }, { merge: true });
+
+                alert(`Jadual ${name} berjaya disimpan!`);
+                
+                // Clear form & reload list
+                document.getElementById('adminName').value = "";
+                loadRosterTable();
+
+            } catch (e) {
+                console.error(e);
+                alert("Gagal simpan.");
+            }
+        }
+
+        window.deleteStaff = async function(name) {
+            if(confirm("Hapus jadual staff ini?")) {
+                await deleteDoc(doc(db, "schedules", name));
+                loadRosterTable();
+            }
+        }
+
+        async function loadRosterTable() {
+            if (!db) return;
+            const tbody = document.getElementById('rosterTableBody');
+            tbody.innerHTML = "<tr><td colspan='4'>Loading...</td></tr>";
+
+            const querySnapshot = await getDocs(collection(db, "schedules"));
+            tbody.innerHTML = ""; // Clear
+
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight:bold; color: var(--primary);">${data.name}</td>
+                    <td>${data.shiftStart} - ${data.shiftEnd}</td>
+                    <td><span class="badge" style="background:#444;">Active</span></td>
+                    <td>
+                        <button onclick="window.deleteStaff('${data.name}')" style="background:#c0392b; color:white; border:none; padding:5px 10px; cursor:pointer;">Hapus</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if (tbody.innerHTML === "") {
+                tbody.innerHTML = "<tr><td colspan='4' class='text-center'>Tiada data staff. Sila tambah staff.</td></tr>";
+            }
+        }
+        
+        // Expose function for delete button inside HTML string
+        window.deleteStaff = window.deleteStaff;
+
+    </script>
+</body>
+</html>
